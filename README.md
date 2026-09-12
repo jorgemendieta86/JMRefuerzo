@@ -1,4 +1,4 @@
-# 📐 Reforzando Operaciones Básicas
+# 📐 Reforzando Operaciones Básicas - IE JOSÉ CARLOS MARIÁTEGUI
 
 <div align="center">
 
