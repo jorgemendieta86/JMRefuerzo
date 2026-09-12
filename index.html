@@ -101,6 +101,35 @@
       </div>
     </div>
 
+    <!-- Ventana emergente de bienvenida -->
+    <div class="controls-overlay active" id="welcomeOverlay">
+      <div class="modal-content welcome-modal">
+        <div class="welcome-modal-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <h2>¡Bienvenido!</h2>
+        <p class="subtitle">Esta plataforma es tu herramienta para practicar y dominar las operaciones básicas de matemáticas: suma, resta, multiplicación y división.</p>
+        <p class="welcome-desc">Selecciona una operación, resuelve los problemas y sube de nivel. Cada respuesta correcta te acerca al éxito. ¡Tu mente es tu mayor poder!</p>
+        <div class="stats-preview">
+          <div class="stat-preview-item">
+            <div class="stat-preview-value">4</div>
+            <div class="stat-preview-label">Operaciones</div>
+          </div>
+          <div class="stat-preview-item">
+            <div class="stat-preview-value">8</div>
+            <div class="stat-preview-label">Niveles</div>
+          </div>
+          <div class="stat-preview-item">
+            <div class="stat-preview-value">60s</div>
+            <div class="stat-preview-label">Tiempo</div>
+          </div>
+        </div>
+        <button class="btn-primary" id="closeWelcomeBtn">¡Empezar Ahora!</button>
+      </div>
+    </div>
+
     <!-- Modal para ingreso de nombre -->
     <div class="controls-overlay" id="nameOverlay">
       <div class="modal-content name-modal">

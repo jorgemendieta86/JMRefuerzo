@@ -517,6 +517,26 @@ function goToMain() {
 document.addEventListener("DOMContentLoaded", function () {
   createParticles();
 
+  const welcomeOverlay = document.getElementById("welcomeOverlay");
+  const closeWelcomeBtn = document.getElementById("closeWelcomeBtn");
+  const mainHeader = document.getElementById("mainHeader");
+  const controlsEl = document.getElementById("controls");
+  const siteFooter = document.getElementById("siteFooter");
+
+  if (mainHeader) mainHeader.style.display = "none";
+  if (controlsEl) controlsEl.style.display = "none";
+  if (siteFooter) siteFooter.style.display = "none";
+
+  if (welcomeOverlay && closeWelcomeBtn) {
+    closeWelcomeBtn.addEventListener("click", function () {
+      unlockAudio();
+      welcomeOverlay.classList.remove("active");
+      if (mainHeader) mainHeader.style.display = "";
+      if (controlsEl) controlsEl.style.display = "block";
+      if (siteFooter) siteFooter.style.display = "";
+    });
+  }
+
   operationGrid = document.getElementById("operationGrid");
   gameArea = document.getElementById("gameArea");
   questionText = document.getElementById("questionText");

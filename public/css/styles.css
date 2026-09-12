@@ -866,6 +866,112 @@ h1 .highlight-alt {
   transform: scale(0.98);
 }
 
+/* Welcome Modal - Ventana emergente de bienvenida */
+.controls-overlay#welcomeOverlay {
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.welcome-modal {
+  max-width: 460px;
+  padding: 3rem 2.5rem;
+  text-align: center;
+}
+
+.welcome-modal-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1.5rem;
+  background: var(--gradient-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+.welcome-modal h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-modal .subtitle {
+  font-size: 1.05rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.welcome-desc {
+  font-size: 0.95rem;
+  color: var(--fg);
+  font-weight: 500;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  padding: 0 0.5rem;
+}
+
+.stats-preview {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.stat-preview-item {
+  text-align: center;
+}
+
+.stat-preview-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-preview-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+#closeWelcomeBtn {
+  font-size: 1.15rem;
+  padding: 1rem 3rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-4));
+  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.3);
+}
+
+#closeWelcomeBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(13, 110, 253, 0.4);
+}
+
+/* Animación de entrada para el modal de bienvenida */
+.controls-overlay#welcomeOverlay .modal-content {
+  animation: welcomeModalIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes welcomeModalIn {
+  from { opacity: 0; transform: scale(0.85) translateY(30px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* Name Modal - Ingreso de nombre */
 .modal-content.name-modal {
   max-width: 400px;
