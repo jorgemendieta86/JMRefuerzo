@@ -14,6 +14,7 @@ const inspirationalQuotes = [
 
 const HISTORY_STORAGE_KEY = "reto_historial_v1";
 const PROGRESS_STORAGE_KEY = "reto_progreso_v1";
+const FAILED_ATTEMPTS_STORAGE_KEY = "reto_intentos_fallidos_v1";
 const QUESTIONS_PER_CHALLENGE = 10;
 const MAX_LEVEL = 8;
 
@@ -144,8 +145,30 @@ function getStudentOperationLevel(studentName, operation) {
   return savedLevel >= 1 && savedLevel <= MAX_LEVEL ? savedLevel : 1;
 }
 
+function getConsecutiveFailures(studentName, operation, level) {
+  const attempts = readStoredValue(FAILED_ATTEMPTS_STORAGE_KEY, {});
+  const record = attempts[getProgressKey(studentName, operation)];
+  if (!record || parseInt(record.level, 10) !== level) return 0;
+
+  const failures = parseInt(record.failures, 10);
+  return failures >= 1 ? failures : 0;
+}
+
 function saveChallengeResult() {
-  const nextLevel = Math.min(state.currentLevel + 1, MAX_LEVEL);
+  const challengePassed = state.aciertos >= QUESTIONS_PER_CHALLENGE;
+  const previousFailures = getConsecutiveFailures(
+    state.studentName,
+    state.currentOperation,
+    state.currentLevel
+  );
+  const failures = challengePassed ? 0 : previousFailures + 1;
+  const lowerLevel = failures >= 2;
+  const nextLevel = challengePassed
+    ? Math.min(state.currentLevel + 1, MAX_LEVEL)
+    : lowerLevel
+      ? Math.max(state.currentLevel - 1, 1)
+      : state.currentLevel;
+
   const history = getChallengeHistory();
   history.push({
     studentName: state.studentName || "Estudiante",
@@ -164,6 +187,19 @@ function saveChallengeResult() {
   const progress = readStoredValue(PROGRESS_STORAGE_KEY, {});
   progress[getProgressKey(state.studentName, state.currentOperation)] = nextLevel;
   writeStoredValue(PROGRESS_STORAGE_KEY, progress);
+
+  const attempts = readStoredValue(FAILED_ATTEMPTS_STORAGE_KEY, {});
+  const attemptKey = getProgressKey(state.studentName, state.currentOperation);
+  if (failures > 0 && !lowerLevel) {
+    attempts[attemptKey] = {
+      level: state.currentLevel,
+      failures: failures
+    };
+  } else {
+    delete attempts[attemptKey];
+  }
+  writeStoredValue(FAILED_ATTEMPTS_STORAGE_KEY, attempts);
+
   renderHistory(state.studentName);
   return nextLevel;
 }
@@ -653,10 +689,11 @@ function startTimer() {
   }, 1000);
 }
 
-function endGame(victoria) {
+function endGame() {
   if (state.challengeEnded) return;
   state.challengeEnded = true;
   clearTimer();
+  const retoSuperado = state.aciertos >= QUESTIONS_PER_CHALLENGE;
   const nextLevel = saveChallengeResult();
   const prevMax = obtenerMaximoAciertos();
   const nuevoMax = state.aciertos > prevMax ? state.aciertos : prevMax;
@@ -677,12 +714,12 @@ function endGame(victoria) {
   const name = state.studentName || "Estudiante";
   const title = controlsOverlay ? controlsOverlay.querySelector("h2") : null;
   if (title) {
-    title.textContent = victoria ? "¡Reto completado, " + name + "!" : "¡Buen esfuerzo, " + name + "!";
-    title.style.color = victoria ? "#15803d" : "#b91c1c";
+    title.textContent = retoSuperado ? "¡Reto completado, " + name + "!" : "¡Buen esfuerzo, " + name + "!";
+    title.style.color = retoSuperado ? "#15803d" : "#b91c1c";
   }
   const sub = controlsOverlay ? controlsOverlay.querySelector(".subtitle") : null;
   if (sub) {
-    sub.innerHTML = victoria
+    sub.innerHTML = retoSuperado
       ? "¡Felicitaciones, <strong>" + name + "</strong>! Lograste <strong>" + state.aciertos + " aciertos</strong>. Tu siguiente reto comenzará en el nivel <strong>" + nextLevel + "</strong>."
       : "¡Buen esfuerzo, <strong>" + name + "</strong>! Lograste <strong>" + state.aciertos + " aciertos</strong> y " + state.errores + " errores. Tu siguiente reto comenzará en el nivel <strong>" + nextLevel + "</strong>.";
   }
@@ -691,7 +728,7 @@ function endGame(victoria) {
     const q = inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
     qEl.innerHTML = "<em>“" + q.text + "”</em><br><small>— " + q.author + "</small>";
   }
-  if (victoria) levelUpEffect();
+  if (retoSuperado) levelUpEffect();
 }
 
 // Volver a la pantalla principal (botón ✕ o tecla Escape)
