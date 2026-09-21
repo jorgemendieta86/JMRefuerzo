@@ -12,57 +12,62 @@ const inspirationalQuotes = [
   { text: "La educación es el pasaporte al futuro.", author: "Malcolm X" }
 ];
 
+const HISTORY_STORAGE_KEY = "reto_historial_v1";
+const PROGRESS_STORAGE_KEY = "reto_progreso_v1";
+const QUESTIONS_PER_CHALLENGE = 10;
+const MAX_LEVEL = 8;
+
 const operationsConfig = {
   suma: {
     name: "Suma",
     levels: {
-      1: { min: 1, max: 9, count: 5 },
-      2: { min: 10, max: 30, count: 5 },
-      3: { min: 20, max: 60, count: 5 },
-      4: { min: 40, max: 99, count: 5 },
-      5: { min: 100, max: 300, count: 5 },
-      6: { min: 200, max: 600, count: 5 },
-      7: { min: 400, max: 900, count: 5 },
-      8: { min: 500, max: 999, count: 5 }
+      1: { min: 1, max: 9, count: QUESTIONS_PER_CHALLENGE },
+      2: { min: 10, max: 30, count: QUESTIONS_PER_CHALLENGE },
+      3: { min: 20, max: 60, count: QUESTIONS_PER_CHALLENGE },
+      4: { min: 40, max: 99, count: QUESTIONS_PER_CHALLENGE },
+      5: { min: 100, max: 300, count: QUESTIONS_PER_CHALLENGE },
+      6: { min: 200, max: 600, count: QUESTIONS_PER_CHALLENGE },
+      7: { min: 400, max: 900, count: QUESTIONS_PER_CHALLENGE },
+      8: { min: 500, max: 999, count: QUESTIONS_PER_CHALLENGE }
     }
   },
   resta: {
     name: "Resta",
     levels: {
-      1: { min: 1, max: 9, count: 5 },
-      2: { min: 10, max: 30, count: 5 },
-      3: { min: 20, max: 60, count: 5 },
-      4: { min: 40, max: 99, count: 5 },
-      5: { min: 100, max: 300, count: 5 },
-      6: { min: 200, max: 600, count: 5 },
-      7: { min: 400, max: 900, count: 5 },
-      8: { min: 500, max: 999, count: 5 }
+      1: { min: 1, max: 9, count: QUESTIONS_PER_CHALLENGE },
+      2: { min: 10, max: 30, count: QUESTIONS_PER_CHALLENGE },
+      3: { min: 20, max: 60, count: QUESTIONS_PER_CHALLENGE },
+      4: { min: 40, max: 99, count: QUESTIONS_PER_CHALLENGE },
+      5: { min: 100, max: 300, count: QUESTIONS_PER_CHALLENGE },
+      6: { min: 200, max: 600, count: QUESTIONS_PER_CHALLENGE },
+      7: { min: 400, max: 900, count: QUESTIONS_PER_CHALLENGE },
+      8: { min: 500, max: 999, count: QUESTIONS_PER_CHALLENGE }
     }
   },
   multiplicacion: {
     name: "Multiplicación",
     levels: {
-      1: { min: 2, max: 5, count: 5 },
-      2: { min: 2, max: 9, count: 5 },
-      3: { min: 3, max: 12, count: 5 },
-      4: { min: 4, max: 15, count: 5 },
-      5: { min: 6, max: 19, count: 5 },
-      6: { min: 7, max: 25, count: 5 },
-      7: { min: 9, max: 35, count: 5 },
-      8: { min: 11, max: 49, count: 5 }
+      1: { min: 2, max: 5, count: QUESTIONS_PER_CHALLENGE },
+      2: { min: 2, max: 9, count: QUESTIONS_PER_CHALLENGE },
+      3: { min: 3, max: 12, count: QUESTIONS_PER_CHALLENGE },
+      4: { min: 4, max: 15, count: QUESTIONS_PER_CHALLENGE },
+      5: { min: 6, max: 19, count: QUESTIONS_PER_CHALLENGE },
+      6: { min: 7, max: 25, count: QUESTIONS_PER_CHALLENGE },
+      7: { min: 9, max: 35, count: QUESTIONS_PER_CHALLENGE },
+      8: { min: 11, max: 49, count: QUESTIONS_PER_CHALLENGE }
     }
   },
   division: {
     name: "División",
     levels: {
-      1: { min: 2, max: 5, count: 5 },
-      2: { min: 2, max: 9, count: 5 },
-      3: { min: 3, max: 12, count: 5 },
-      4: { min: 4, max: 15, count: 5 },
-      5: { min: 5, max: 20, count: 5 },
-      6: { min: 6, max: 25, count: 5 },
-      7: { min: 7, max: 30, count: 5 },
-      8: { min: 8, max: 40, count: 5 }
+      1: { min: 2, max: 5, count: QUESTIONS_PER_CHALLENGE },
+      2: { min: 2, max: 9, count: QUESTIONS_PER_CHALLENGE },
+      3: { min: 3, max: 12, count: QUESTIONS_PER_CHALLENGE },
+      4: { min: 4, max: 15, count: QUESTIONS_PER_CHALLENGE },
+      5: { min: 5, max: 20, count: QUESTIONS_PER_CHALLENGE },
+      6: { min: 6, max: 25, count: QUESTIONS_PER_CHALLENGE },
+      7: { min: 7, max: 30, count: QUESTIONS_PER_CHALLENGE },
+      8: { min: 8, max: 40, count: QUESTIONS_PER_CHALLENGE }
     }
   }
 };
@@ -75,8 +80,10 @@ let state = {
   aciertos: 0,
   errores: 0,
   questionsInCurrentLevel: 0,
+  questionsAnswered: 0,
   totalQuestions: 0,
-  pendingOperation: null
+  pendingOperation: null,
+  challengeEnded: false
 };
 
 let timerInterval = null;
@@ -101,6 +108,162 @@ function guardarMaximoAciertos(v) {
   try {
     localStorage.setItem("max_aciertos", String(v));
   } catch (e) {}
+}
+
+function readStoredValue(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value === null ? fallback : value;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function writeStoredValue(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+}
+
+function normalizeStudentName(name) {
+  return String(name || "").trim().toLocaleLowerCase("es");
+}
+
+function getProgressKey(studentName, operation) {
+  return normalizeStudentName(studentName) + "::" + operation;
+}
+
+function getChallengeHistory() {
+  const history = readStoredValue(HISTORY_STORAGE_KEY, []);
+  return Array.isArray(history) ? history : [];
+}
+
+function getStudentOperationLevel(studentName, operation) {
+  const progress = readStoredValue(PROGRESS_STORAGE_KEY, {});
+  const savedLevel = parseInt(progress[getProgressKey(studentName, operation)], 10);
+  return savedLevel >= 1 && savedLevel <= MAX_LEVEL ? savedLevel : 1;
+}
+
+function saveChallengeResult() {
+  const nextLevel = Math.min(state.currentLevel + 1, MAX_LEVEL);
+  const history = getChallengeHistory();
+  history.push({
+    studentName: state.studentName || "Estudiante",
+    operation: state.currentOperation,
+    operationName: operationsConfig[state.currentOperation].name,
+    level: state.currentLevel,
+    nextLevel: nextLevel,
+    aciertos: state.aciertos,
+    errores: state.errores,
+    totalQuestions: state.questionsAnswered,
+    score: state.score,
+    completedAt: new Date().toISOString()
+  });
+  writeStoredValue(HISTORY_STORAGE_KEY, history);
+
+  const progress = readStoredValue(PROGRESS_STORAGE_KEY, {});
+  progress[getProgressKey(state.studentName, state.currentOperation)] = nextLevel;
+  writeStoredValue(PROGRESS_STORAGE_KEY, progress);
+  renderHistory(state.studentName);
+  return nextLevel;
+}
+
+function formatHistoryDate(value) {
+  try {
+    return new Intl.DateTimeFormat("es-PE", {
+      dateStyle: "short",
+      timeStyle: "short"
+    }).format(new Date(value));
+  } catch (e) {
+    return "-";
+  }
+}
+
+function renderHistory(selectedStudent) {
+  const body = document.getElementById("historyTableBody");
+  const countEl = document.getElementById("historyCount");
+  const filterEl = document.getElementById("historyStudentFilter");
+  if (!body) return;
+
+  const history = getChallengeHistory().slice().reverse();
+  const previousFilter = filterEl ? filterEl.value : "all";
+  const studentNames = [];
+  const studentKeys = new Set();
+
+  history.forEach(function (record) {
+    const name = record.studentName || "Estudiante";
+    const key = normalizeStudentName(name);
+    if (!studentKeys.has(key)) {
+      studentKeys.add(key);
+      studentNames.push({ key: key, name: name });
+    }
+  });
+
+  if (filterEl) {
+    filterEl.innerHTML = "";
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.textContent = "Todos los estudiantes";
+    filterEl.appendChild(allOption);
+
+    studentNames.sort(function (a, b) {
+      return a.name.localeCompare(b.name, "es");
+    });
+    studentNames.forEach(function (student) {
+      const option = document.createElement("option");
+      option.value = student.key;
+      option.textContent = student.name;
+      filterEl.appendChild(option);
+    });
+
+    const requestedFilter = selectedStudent
+      ? normalizeStudentName(selectedStudent)
+      : previousFilter;
+    const hasRequestedStudent = requestedFilter === "all" || studentKeys.has(requestedFilter);
+    filterEl.value = hasRequestedStudent ? requestedFilter : "all";
+  }
+
+  const activeFilter = filterEl ? filterEl.value : "all";
+  const visibleHistory = activeFilter === "all"
+    ? history
+    : history.filter(function (record) {
+      return normalizeStudentName(record.studentName || "Estudiante") === activeFilter;
+    });
+
+  body.innerHTML = "";
+  if (countEl) countEl.textContent = visibleHistory.length + (visibleHistory.length === 1 ? " reto" : " retos");
+
+  if (visibleHistory.length === 0) {
+    const emptyRow = document.createElement("tr");
+    emptyRow.className = "history-empty";
+    const emptyCell = document.createElement("td");
+    emptyCell.colSpan = 6;
+    emptyCell.textContent = activeFilter === "all"
+      ? "Todavía no hay retos registrados."
+      : "Este estudiante todavía no tiene retos registrados.";
+    emptyRow.appendChild(emptyCell);
+    body.appendChild(emptyRow);
+    return;
+  }
+
+  visibleHistory.forEach(function (record) {
+    const row = document.createElement("tr");
+    const values = [
+      record.studentName || "Estudiante",
+      record.operationName || (operationsConfig[record.operation] || {}).name || record.operation,
+      "Nivel " + record.level + " → " + record.nextLevel,
+      String(record.aciertos) + "/" + (record.totalQuestions || QUESTIONS_PER_CHALLENGE),
+      String(record.errores),
+      formatHistoryDate(record.completedAt)
+    ];
+    values.forEach(function (value, index) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      if (index === 3) cell.className = record.aciertos >= 10 ? "history-success" : "history-score";
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
 }
 
 function createParticles() {
@@ -192,12 +355,14 @@ function showNameModal(operationKey) {
 function startGameWithName(operationKey, studentName) {
   state.studentName = studentName;
   state.currentOperation = operationKey;
-  state.currentLevel = 1;
+  state.currentLevel = getStudentOperationLevel(studentName, operationKey);
   state.score = 0;
   state.aciertos = 0;
   state.errores = 0;
   state.questionsInCurrentLevel = 0;
+  state.questionsAnswered = 0;
   state.totalQuestions = 0;
+  state.challengeEnded = false;
 
   const btns = document.querySelectorAll(".operation-btn");
   btns.forEach(function (btn) {
@@ -215,7 +380,7 @@ function startGameWithName(operationKey, studentName) {
   updateStudentNameDisplay(studentName);
   updateCounters();
   document.getElementById("score").textContent = "0";
-  if (levelDisplay) levelDisplay.textContent = "Nivel 1";
+  if (levelDisplay) levelDisplay.textContent = "Nivel " + state.currentLevel;
 
   showQuestion();
   startTimer();
@@ -240,44 +405,89 @@ function updateCounters() {
   if (w) w.textContent = state.errores;
 }
 
-function generateQuestion(operation, level) {
-  const cfg = operationsConfig[operation].levels[level];
-  const min = cfg.min;
-  const max = cfg.max;
+function getMagnitudeRange(operation, level, twoDigits) {
+  if (!twoDigits) {
+    return operation === "suma" || operation === "resta"
+      ? { min: 1, max: 9 }
+      : { min: 2, max: 9 };
+  }
+
+  const growth = Math.max(0, level - 1);
+  if (operation === "suma" || operation === "resta") {
+    return { min: 10, max: Math.min(99, 20 + growth * 15) };
+  }
+  if (operation === "multiplicacion") {
+    return { min: 10, max: Math.min(99, 20 + growth * 12) };
+  }
+  return { min: 10, max: Math.min(99, 24 + growth * 12) };
+}
+
+function applySign(value, level) {
+  if (level < 2 || value === 0) return value;
+  return Math.random() < 0.5 ? -value : value;
+}
+
+function formatNumber(value) {
+  return String(value);
+}
+
+function formatSignedOperation(a, b, operator, level) {
+  if (level < 2) return formatNumber(a, level) + " " + operator + " " + formatNumber(b, level);
+
+  const first = formatNumber(a, level);
+  const second = Math.abs(b);
+  const secondText = formatNumber(second, level);
+
+  if (operator === "+") {
+    return first + (b < 0 ? " - " : " + ") + secondText;
+  }
+  return first + (b < 0 ? " + " : " - ") + secondText;
+}
+
+function generateQuestion(operation, level, questionIndex) {
+  const twoDigits = questionIndex % 2 === 1;
+  const range = getMagnitudeRange(operation, level, twoDigits);
   let a, b, answer;
 
   if (operation === "suma") {
-    a = rand(min, max);
-    b = rand(min, max);
+    a = applySign(rand(range.min, range.max), level);
+    b = applySign(rand(range.min, range.max), level);
     answer = a + b;
-    return { question: a + " + " + b, answer: answer };
+    return { question: formatSignedOperation(a, b, "+", level), answer: answer };
   }
   if (operation === "resta") {
-    a = rand(min, max);
-    b = rand(2, a);
+    const first = rand(range.min, range.max);
+    const second = level < 2 ? rand(range.min, first) : rand(range.min, range.max);
+    a = applySign(first, level);
+    b = applySign(second, level);
     answer = a - b;
-    return { question: a + " − " + b, answer: answer };
+    return { question: formatSignedOperation(a, b, "-", level), answer: answer };
   }
   if (operation === "multiplicacion") {
-    const hi = Math.min(max, 99);
-    const lo = Math.max(2, Math.min(min, hi));
-    a = rand(lo, hi);
-    b = rand(2, Math.min(12 + level, 25));
+    a = applySign(rand(range.min, range.max), level);
+    b = applySign(rand(2, Math.min(9, 5 + level)), level);
     answer = a * b;
-    return { question: a + " × " + b, answer: answer };
+    return { question: formatNumber(a, level) + " × " + formatNumber(b, level), answer: answer };
   }
-  // division exacta
-  b = rand(Math.max(2, Math.min(min, max)), Math.max(3, Math.min(max, 60)));
-  if (b < 2) b = 2;
-  const q = rand(2, Math.max(3, Math.min(25, Math.floor(max / b) || 5)));
-  a = b * q;
-  answer = q;
-  return { question: a + " ÷ " + b, answer: answer };
+
+  // División exacta, con dividendo de una o dos cifras según la posición.
+  const divisorMagnitude = rand(2, Math.min(9, 3 + level, range.max));
+  const quotientMin = twoDigits ? Math.max(1, Math.ceil(range.min / divisorMagnitude)) : 1;
+  const quotientMax = Math.max(quotientMin, Math.floor(range.max / divisorMagnitude));
+  const quotient = rand(quotientMin, quotientMax);
+  a = applySign(divisorMagnitude * quotient, level);
+  b = applySign(divisorMagnitude, level);
+  answer = a / b;
+  return { question: formatNumber(a, level) + " ÷ " + formatNumber(b, level), answer: answer };
 }
 
 function showQuestion() {
   if (!state.currentOperation) return;
-  const q = generateQuestion(state.currentOperation, state.currentLevel);
+  if (state.questionsAnswered >= getQuestionsForLevel()) {
+    endGame(true);
+    return;
+  }
+  const q = generateQuestion(state.currentOperation, state.currentLevel, state.questionsAnswered);
   if (questionText) questionText.innerHTML = "<span>" + q.question + " = ?</span>";
   if (!answerButtons) return;
 
@@ -287,10 +497,14 @@ function showQuestion() {
   let guard = 0;
   while (wrongs.size < 3 && guard < 100) {
     guard++;
-    let w;
-    if (state.currentOperation === "division") w = correctAnswer + rand(-4, 4);
-    else w = correctAnswer + rand(-8, 8);
-    if (w >= 0 && w !== correctAnswer) wrongs.add(w);
+    const delta = state.currentOperation === "division" ? rand(1, 5) : rand(1, 12);
+    const w = correctAnswer + (Math.random() < 0.5 ? -delta : delta);
+    if (w !== correctAnswer) wrongs.add(w);
+  }
+  let fallback = correctAnswer + 1;
+  while (wrongs.size < 3) {
+    if (fallback === correctAnswer) fallback++;
+    wrongs.add(fallback++);
   }
   const all = Array.from(wrongs).concat([correctAnswer]).sort(function () { return Math.random() - 0.5; });
   all.forEach(function (ans) {
@@ -302,8 +516,8 @@ function showQuestion() {
     answerButtons.appendChild(btn);
   });
 
-  state.questionsInCurrentLevel++;
-  state.totalQuestions++;
+  state.questionsInCurrentLevel = state.questionsAnswered + 1;
+  state.totalQuestions = state.questionsAnswered + 1;
 }
 
 function showFeedback(ok) {
@@ -324,13 +538,18 @@ function showFeedback(ok) {
 
 function checkAnswer(selected, correct, btn) {
   unlockAudio();
+  if (state.challengeEnded) return;
   const buttons = answerButtons ? answerButtons.querySelectorAll(".answer-btn") : [];
   buttons.forEach(function (b) {
-    const v = parseInt(b.textContent, 10);
+    const v = Number(b.textContent);
     if (v === correct) b.classList.add("correct");
     if (b === btn && v !== correct) b.classList.add("wrong");
     b.disabled = true;
   });
+
+  state.questionsAnswered++;
+  state.questionsInCurrentLevel = state.questionsAnswered;
+  state.totalQuestions = state.questionsAnswered;
 
   if (selected === correct) {
     state.score += 10 * state.currentLevel;
@@ -340,7 +559,8 @@ function checkAnswer(selected, correct, btn) {
     showFeedback(true);
     celebrate(btn);
     setTimeout(function () {
-      if (state.questionsInCurrentLevel >= getQuestionsForLevel()) nextLevel();
+      if (state.challengeEnded) return;
+      if (state.questionsAnswered >= getQuestionsForLevel()) endGame(true);
       else showQuestion();
     }, 1400);
   } else {
@@ -348,27 +568,16 @@ function checkAnswer(selected, correct, btn) {
     updateCounters();
     showFeedback(false);
     errorShake(btn);
-    setTimeout(function () { showQuestion(); }, 1800);
+    setTimeout(function () {
+      if (state.challengeEnded) return;
+      if (state.questionsAnswered >= getQuestionsForLevel()) endGame(true);
+      else showQuestion();
+    }, 1800);
   }
 }
 
 function getQuestionsForLevel() {
   return operationsConfig[state.currentOperation].levels[state.currentLevel].count;
-}
-
-function nextLevel() {
-  state.currentLevel++;
-  state.questionsInCurrentLevel = 0;
-  const maxLevel = Object.keys(operationsConfig[state.currentOperation].levels).length;
-  if (state.currentLevel > maxLevel) {
-    levelUpEffect();
-    setTimeout(function () { endGame(true); }, 900);
-    return;
-  }
-  levelUpEffect();
-  if (levelDisplay) levelDisplay.textContent = "Nivel " + state.currentLevel;
-  showQuestion();
-  // El cronómetro NO se reinicia: los 60 segundos son únicos para todo el reto
 }
 
 function clearTimer() {
@@ -445,7 +654,10 @@ function startTimer() {
 }
 
 function endGame(victoria) {
+  if (state.challengeEnded) return;
+  state.challengeEnded = true;
   clearTimer();
+  const nextLevel = saveChallengeResult();
   const prevMax = obtenerMaximoAciertos();
   const nuevoMax = state.aciertos > prevMax ? state.aciertos : prevMax;
   guardarMaximoAciertos(nuevoMax);
@@ -465,14 +677,14 @@ function endGame(victoria) {
   const name = state.studentName || "Estudiante";
   const title = controlsOverlay ? controlsOverlay.querySelector("h2") : null;
   if (title) {
-    title.textContent = victoria ? "¡VICTORIA TOTAL, " + name + "!" : "¡Buen esfuerzo, " + name + "!";
+    title.textContent = victoria ? "¡Reto completado, " + name + "!" : "¡Buen esfuerzo, " + name + "!";
     title.style.color = victoria ? "#15803d" : "#b91c1c";
   }
   const sub = controlsOverlay ? controlsOverlay.querySelector(".subtitle") : null;
   if (sub) {
     sub.innerHTML = victoria
-      ? "¡Felicitaciones, <strong>" + name + "</strong>! Completaste todos los niveles con <strong>" + state.aciertos + " aciertos</strong>."
-      : "¡Buen esfuerzo, <strong>" + name + "</strong>! Lograste <strong>" + state.aciertos + " aciertos</strong> y " + state.errores + " errores.";
+      ? "¡Felicitaciones, <strong>" + name + "</strong>! Lograste <strong>" + state.aciertos + " aciertos</strong>. Tu siguiente reto comenzará en el nivel <strong>" + nextLevel + "</strong>."
+      : "¡Buen esfuerzo, <strong>" + name + "</strong>! Lograste <strong>" + state.aciertos + " aciertos</strong> y " + state.errores + " errores. Tu siguiente reto comenzará en el nivel <strong>" + nextLevel + "</strong>.";
   }
   const qEl = document.getElementById("inspirationalQuote");
   if (qEl) {
@@ -500,8 +712,10 @@ function goToMain() {
   state.aciertos = 0;
   state.errores = 0;
   state.questionsInCurrentLevel = 0;
+  state.questionsAnswered = 0;
   state.totalQuestions = 0;
   state.pendingOperation = null;
+  state.challengeEnded = false;
   const sc = document.getElementById("score");
   if (sc) sc.textContent = "0";
   const lv = document.getElementById("levelDisplay");
@@ -512,6 +726,7 @@ function goToMain() {
   }
   updateCounters();
   initOperationButtons();
+  renderHistory();
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -553,6 +768,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   initOperationButtons();
   updateCounters();
+  renderHistory();
+
+  const historyStudentFilter = document.getElementById("historyStudentFilter");
+  if (historyStudentFilter) {
+    historyStudentFilter.addEventListener("change", function () {
+      renderHistory();
+    });
+  }
 
   if (nameInput && startChallengeBtn) {
     nameInput.addEventListener("input", function () {

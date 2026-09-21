@@ -47,7 +47,43 @@
       <div class="operation-grid" id="operationGrid">
         <!-- Botones dinámicos -->
       </div>
-    </div>
+
+      <section class="progress-history" aria-labelledby="historyTitle">
+        <div class="history-heading">
+          <div>
+            <p class="section-kicker">Seguimiento</p>
+            <h3 id="historyTitle">Avance de los estudiantes</h3>
+          </div>
+          <span class="history-badge" id="historyCount">0 retos</span>
+        </div>
+        <div class="history-controls">
+          <label for="historyStudentFilter">Mostrar resultados de:</label>
+          <select id="historyStudentFilter">
+            <option value="all">Todos los estudiantes</option>
+          </select>
+        </div>
+        <p class="history-description">Cada reto completado queda registrado para que el progreso de cada operación continúe en el siguiente nivel.</p>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>Operación</th>
+                <th>Nivel</th>
+                <th>Aciertos</th>
+                <th>Errores</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr class="history-empty">
+                <td colspan="6">Todavía no hay retos registrados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      </div>
 
     <div class="game-area" id="gameArea" style="display: none;">
       <div class="game-header">
