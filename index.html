@@ -22,7 +22,7 @@
   </div>
   <div class="particles" id="particles"></div>
   <div class="grid-overlay"></div>
-  <div class="timer" id="timer">60</div>
+  <div class="timer" id="timer">00:00</div>
 
   <header id="mainHeader">
     <div class="logo-container">
@@ -72,12 +72,13 @@
                 <th>Nivel</th>
                 <th>Aciertos</th>
                 <th>Errores</th>
+                <th>Tiempo</th>
                 <th>Fecha</th>
               </tr>
             </thead>
             <tbody id="historyTableBody">
               <tr class="history-empty">
-                <td colspan="6">Todavía no hay retos registrados.</td>
+                <td colspan="7">Todavía no hay retos registrados.</td>
               </tr>
             </tbody>
           </table>
@@ -131,6 +132,7 @@
             <div class="label">Máximo</div>
           </div>
         </div>
+        <p>Tiempo empleado: <span id="elapsedTime">00:00</span></p>
         <p>Puntuación final: <span id="finalScore">0</span></p>
         <p class="inspirational-quote" id="inspirationalQuote"></p>
         <button class="btn-primary" id="restartBtn">Volver a Jugar</button>
@@ -158,8 +160,8 @@
             <div class="stat-preview-label">Niveles</div>
           </div>
           <div class="stat-preview-item">
-            <div class="stat-preview-value">60s</div>
-            <div class="stat-preview-label">Tiempo</div>
+            <div class="stat-preview-value">10</div>
+            <div class="stat-preview-label">Aciertos por reto</div>
           </div>
         </div>
         <button class="btn-primary" id="closeWelcomeBtn">¡Empezar Ahora!</button>

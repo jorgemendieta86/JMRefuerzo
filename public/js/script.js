@@ -84,7 +84,9 @@ let state = {
   questionsAnswered: 0,
   totalQuestions: 0,
   pendingOperation: null,
-  challengeEnded: false
+  challengeEnded: false,
+  challengeStartedAt: null,
+  elapsedSeconds: 0
 };
 
 let timerInterval = null;
@@ -179,6 +181,7 @@ function saveChallengeResult() {
     aciertos: state.aciertos,
     errores: state.errores,
     totalQuestions: state.questionsAnswered,
+    elapsedSeconds: state.elapsedSeconds,
     score: state.score,
     completedAt: new Date().toISOString()
   });
@@ -213,6 +216,17 @@ function formatHistoryDate(value) {
   } catch (e) {
     return "-";
   }
+}
+
+function formatElapsedTime(seconds) {
+  const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+  return String(minutes).padStart(2, "0") + ":" + String(remainingSeconds).padStart(2, "0");
+}
+
+function formatStoredElapsedTime(seconds) {
+  return seconds === undefined || seconds === null ? "-" : formatElapsedTime(seconds);
 }
 
 function renderHistory(selectedStudent) {
@@ -273,7 +287,7 @@ function renderHistory(selectedStudent) {
     const emptyRow = document.createElement("tr");
     emptyRow.className = "history-empty";
     const emptyCell = document.createElement("td");
-    emptyCell.colSpan = 6;
+    emptyCell.colSpan = 7;
     emptyCell.textContent = activeFilter === "all"
       ? "Todavía no hay retos registrados."
       : "Este estudiante todavía no tiene retos registrados.";
@@ -290,6 +304,7 @@ function renderHistory(selectedStudent) {
       "Nivel " + record.level + " → " + record.nextLevel,
       String(record.aciertos) + "/" + (record.totalQuestions || QUESTIONS_PER_CHALLENGE),
       String(record.errores),
+      formatStoredElapsedTime(record.elapsedSeconds),
       formatHistoryDate(record.completedAt)
     ];
     values.forEach(function (value, index) {
@@ -399,6 +414,8 @@ function startGameWithName(operationKey, studentName) {
   state.questionsAnswered = 0;
   state.totalQuestions = 0;
   state.challengeEnded = false;
+  state.challengeStartedAt = Date.now();
+  state.elapsedSeconds = 0;
 
   const btns = document.querySelectorAll(".operation-btn");
   btns.forEach(function (btn) {
@@ -519,7 +536,7 @@ function generateQuestion(operation, level, questionIndex) {
 
 function showQuestion() {
   if (!state.currentOperation) return;
-  if (state.questionsAnswered >= getQuestionsForLevel()) {
+  if (state.aciertos >= QUESTIONS_PER_CHALLENGE) {
     endGame(true);
     return;
   }
@@ -596,7 +613,7 @@ function checkAnswer(selected, correct, btn) {
     celebrate(btn);
     setTimeout(function () {
       if (state.challengeEnded) return;
-      if (state.questionsAnswered >= getQuestionsForLevel()) endGame(true);
+      if (state.aciertos >= QUESTIONS_PER_CHALLENGE) endGame(true);
       else showQuestion();
     }, 1400);
   } else {
@@ -606,7 +623,7 @@ function checkAnswer(selected, correct, btn) {
     errorShake(btn);
     setTimeout(function () {
       if (state.challengeEnded) return;
-      if (state.questionsAnswered >= getQuestionsForLevel()) endGame(true);
+      if (state.aciertos >= QUESTIONS_PER_CHALLENGE) endGame(true);
       else showQuestion();
     }, 1800);
   }
@@ -666,25 +683,17 @@ function playTick(urgent) {
 
 function startTimer() {
   clearTimer();
-  // Tiempo ÚNICO de 60 segundos para todo el reto: no se reinicia al acertar ni al subir de nivel
-  const seconds = 60;
-  let left = seconds;
+  if (!state.challengeStartedAt) state.challengeStartedAt = Date.now();
+  state.elapsedSeconds = 0;
   if (timerEl) {
-    timerEl.textContent = left;
+    timerEl.textContent = formatElapsedTime(state.elapsedSeconds);
     timerEl.classList.remove("pulse-warn", "pulse-critical");
   }
   timerInterval = setInterval(function () {
-    left--;
-    playTick(left <= 5);
+    state.elapsedSeconds = Math.floor((Date.now() - state.challengeStartedAt) / 1000);
     if (timerEl) {
-      timerEl.textContent = left;
+      timerEl.textContent = formatElapsedTime(state.elapsedSeconds);
       timerEl.classList.remove("pulse-warn", "pulse-critical");
-      if (left <= 15 && left > 5) timerEl.classList.add("pulse-warn");
-      if (left <= 5 && left > 0) timerEl.classList.add("pulse-critical");
-    }
-    if (left <= 0) {
-      clearTimer();
-      endGame(false);
     }
   }, 1000);
 }
@@ -693,6 +702,7 @@ function endGame() {
   if (state.challengeEnded) return;
   state.challengeEnded = true;
   clearTimer();
+  state.elapsedSeconds = Math.floor((Date.now() - state.challengeStartedAt) / 1000);
   const retoSuperado = state.aciertos >= QUESTIONS_PER_CHALLENGE;
   const nextLevel = saveChallengeResult();
   const prevMax = obtenerMaximoAciertos();
@@ -710,6 +720,8 @@ function endGame() {
   if (tw) tw.textContent = state.errores;
   const mx = document.getElementById("maxAciertos");
   if (mx) mx.textContent = nuevoMax;
+  const et = document.getElementById("elapsedTime");
+  if (et) et.textContent = formatElapsedTime(state.elapsedSeconds);
 
   const name = state.studentName || "Estudiante";
   const title = controlsOverlay ? controlsOverlay.querySelector("h2") : null;
@@ -753,12 +765,14 @@ function goToMain() {
   state.totalQuestions = 0;
   state.pendingOperation = null;
   state.challengeEnded = false;
+  state.challengeStartedAt = null;
+  state.elapsedSeconds = 0;
   const sc = document.getElementById("score");
   if (sc) sc.textContent = "0";
   const lv = document.getElementById("levelDisplay");
   if (lv) lv.textContent = "Nivel 1";
   if (timerEl) {
-    timerEl.textContent = "60";
+    timerEl.textContent = "00:00";
     timerEl.classList.remove("pulse-warn", "pulse-critical");
   }
   updateCounters();

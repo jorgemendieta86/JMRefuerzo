@@ -845,12 +845,12 @@ h1 .highlight-alt {
   position: fixed;
   top: 2rem;
   right: 2rem;
-  width: 72px;
+  width: 104px;
   height: 72px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--warn), var(--accent-2));
   color: var(--bg);
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 800;
   font-family: var(--font-display);
   display: flex;
@@ -1317,9 +1317,9 @@ h1 .highlight-alt {
     font-size: 0.9rem;
   }
   .timer {
-    width: 64px;
+    width: 92px;
     height: 64px;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
   .modal-content {
     padding: 2.5rem 2rem;

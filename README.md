@@ -21,7 +21,7 @@ El proyecto busca convertirse en una herramienta de apoyo didáctico que complem
 ## ✨ Características Principales
 
 - 🎯 **Selección de operaciones**: Los estudiantes pueden elegir entre suma, resta, multiplicación y división para enfocar su práctica.
-- ⏱️ **Temporizador integrado**: Sesiones de tiempo limitado que fomentan la velocidad y precisión mental.
+- ⏱️ **Temporizador integrado**: Registra el tiempo que tarda cada estudiante en conseguir 10 aciertos, sin límite de tiempo.
 - 📊 **Sistema de puntuación**: Lleva un registro detallado de aciertos y errores en tiempo real.
 - 📈 **Estadísticas finales**: Al finalizar cada sesión, se muestran los resultados completos incluyendo máximo de aciertos alcanzado.
 - 🏅 **Niveles progresivos**: La dificultad aumenta conforme el estudiante avanza y acierta correctamente.
@@ -84,7 +84,7 @@ WEB REFUERZO/
 1. **Abre el archivo `index.html`** en tu navegador web.
 2. **Ingresa tu nombre** en el modal de bienvenida y haz clic en **"Comenzar Reto"**.
 3. **Selecciona las operaciones** con las que deseas practicar (suma, resta, multiplicación, división).
-4. **Resuelve los problemas** que aparecen en pantalla antes de que se agote el tiempo.
+4. **Resuelve los problemas** que aparecen en pantalla hasta conseguir 10 aciertos.
 5. **Revisa tus estadísticas** al finalizar la sesión y vuelve a jugar para mejorar tu puntaje.
 
 ### Controles:
