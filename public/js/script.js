@@ -15,6 +15,7 @@ const inspirationalQuotes = [
 const HISTORY_STORAGE_KEY = "reto_historial_v1";
 const PROGRESS_STORAGE_KEY = "reto_progreso_v1";
 const FAILED_ATTEMPTS_STORAGE_KEY = "reto_intentos_fallidos_v1";
+const ACTIVE_SESSION_STORAGE_KEY = "reto_sesion_activa_v1";
 const QUESTIONS_PER_CHALLENGE = 10;
 const MAX_LEVEL = 8;
 
@@ -86,13 +87,16 @@ let state = {
   pendingOperation: null,
   challengeEnded: false,
   challengeStartedAt: null,
-  elapsedSeconds: 0
+  elapsedSeconds: 0,
+  currentQuestion: null,
+  answerOptions: []
 };
 
 let timerInterval = null;
 let operationGrid, gameArea, questionText, answerButtons, timerEl, levelDisplay;
 let controlsOverlay, finalScoreEl, restartBtn, controls;
 let nameOverlay, nameInput, startChallengeBtn;
+let signHint, signHintText;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -126,6 +130,33 @@ function writeStoredValue(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {}
+}
+
+function getActiveSession() {
+  const session = readStoredValue(ACTIVE_SESSION_STORAGE_KEY, null);
+  return session && session.studentName && session.currentOperation ? session : null;
+}
+
+function saveActiveSession() {
+  if (!state.currentOperation || state.challengeEnded || !state.studentName) return;
+  writeStoredValue(ACTIVE_SESSION_STORAGE_KEY, {
+    studentName: state.studentName,
+    currentOperation: state.currentOperation,
+    currentLevel: state.currentLevel,
+    score: state.score,
+    aciertos: state.aciertos,
+    errores: state.errores,
+    questionsAnswered: state.questionsAnswered,
+    totalQuestions: state.totalQuestions,
+    elapsedSeconds: state.elapsedSeconds,
+    currentQuestion: state.currentQuestion,
+    answerOptions: state.answerOptions,
+    savedAt: Date.now()
+  });
+}
+
+function clearActiveSession() {
+  try { localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY); } catch (e) {}
 }
 
 function normalizeStudentName(name) {
@@ -531,18 +562,32 @@ function showNameModal(operationKey) {
 }
 
 function startGameWithName(operationKey, studentName) {
+  const stored = getActiveSession();
+  const sameSession = stored &&
+    normalizeStudentName(stored.studentName) === normalizeStudentName(studentName) &&
+    stored.currentOperation === operationKey &&
+    Date.now() - Number(stored.savedAt || 0) < 24 * 60 * 60 * 1000;
+  const resume = sameSession && window.confirm(
+    "Tienes un reto pendiente de " + operationsConfig[operationKey].name + ". ¿Deseas continuar donde lo dejaste?"
+  );
+
   state.studentName = studentName;
   state.currentOperation = operationKey;
-  state.currentLevel = getStudentOperationLevel(studentName, operationKey);
-  state.score = 0;
-  state.aciertos = 0;
-  state.errores = 0;
-  state.questionsInCurrentLevel = 0;
-  state.questionsAnswered = 0;
-  state.totalQuestions = 0;
+  state.currentLevel = resume ? stored.currentLevel : getStudentOperationLevel(studentName, operationKey);
+  state.score = resume ? stored.score : 0;
+  state.aciertos = resume ? stored.aciertos : 0;
+  state.errores = resume ? stored.errores : 0;
+  state.questionsInCurrentLevel = resume ? stored.questionsAnswered : 0;
+  state.questionsAnswered = resume ? stored.questionsAnswered : 0;
+  state.totalQuestions = resume ? stored.totalQuestions : 0;
   state.challengeEnded = false;
-  state.challengeStartedAt = Date.now();
-  state.elapsedSeconds = 0;
+  state.elapsedSeconds = resume ? stored.elapsedSeconds : 0;
+  state.challengeStartedAt = resume
+    ? Date.now() - state.elapsedSeconds * 1000
+    : Date.now();
+  state.currentQuestion = resume ? stored.currentQuestion : null;
+  state.answerOptions = resume && Array.isArray(stored.answerOptions) ? stored.answerOptions : [];
+  if (!resume) clearActiveSession();
 
   const btns = document.querySelectorAll(".operation-btn");
   btns.forEach(function (btn) {
@@ -559,11 +604,11 @@ function startGameWithName(operationKey, studentName) {
 
   updateStudentNameDisplay(studentName);
   updateCounters();
-  document.getElementById("score").textContent = "0";
+  document.getElementById("score").textContent = state.score;
   if (levelDisplay) levelDisplay.textContent = "Nivel " + state.currentLevel;
 
   showQuestion();
-  startTimer();
+  startTimer(resume);
 }
 
 function updateStudentNameDisplay(name) {
@@ -585,25 +630,29 @@ function updateCounters() {
   if (w) w.textContent = state.errores;
 }
 
-function getMagnitudeRange(operation, level, twoDigits) {
-  if (!twoDigits) {
+function getMagnitudeRange(operation, level, questionIndex) {
+  const occasionalSingleDigit = level === 1 && questionIndex % 5 === 0;
+  if (occasionalSingleDigit) {
     return operation === "suma" || operation === "resta"
       ? { min: 1, max: 9 }
       : { min: 2, max: 9 };
   }
 
-  const growth = Math.max(0, level - 1);
-  if (operation === "suma" || operation === "resta") {
-    return { min: 10, max: Math.min(99, 20 + growth * 15) };
-  }
-  if (operation === "multiplicacion") {
-    return { min: 10, max: Math.min(99, 20 + growth * 12) };
-  }
-  return { min: 10, max: Math.min(99, 24 + growth * 12) };
+  const ranges = {
+    1: { min: 10, max: 30 },
+    2: { min: 10, max: 30 },
+    3: { min: 20, max: 60 },
+    4: { min: 40, max: 99 },
+    5: { min: 100, max: 300 },
+    6: { min: 200, max: 600 },
+    7: { min: 400, max: 900 },
+    8: { min: 500, max: 999 }
+  };
+  return ranges[level] || ranges[1];
 }
 
 function applySign(value, level) {
-  if (level < 2 || value === 0) return value;
+  if (value === 0) return value;
   return Math.random() < 0.5 ? -value : value;
 }
 
@@ -612,28 +661,25 @@ function formatNumber(value) {
 }
 
 function formatSignedOperation(a, b, operator, level) {
-  if (level < 2) return formatNumber(a, level) + " " + operator + " " + formatNumber(b, level);
-
   const first = formatNumber(a, level);
-  const second = Math.abs(b);
-  const secondText = formatNumber(second, level);
-
-  if (operator === "+") {
-    return first + (b < 0 ? " - " : " + ") + secondText;
+  if (level === 1) {
+    const magnitude = formatNumber(Math.abs(b), level);
+    if (operator === "+") return first + (b < 0 ? " - " : " + ") + magnitude;
+    return first + (b < 0 ? " + " : " - ") + magnitude;
   }
-  return first + (b < 0 ? " + " : " - ") + secondText;
+  const second = b < 0 ? "(" + formatNumber(b, level) + ")" : formatNumber(b, level);
+  return first + " " + operator + " " + second;
 }
 
 function generateQuestion(operation, level, questionIndex) {
-  const twoDigits = questionIndex % 2 === 1;
-  const range = getMagnitudeRange(operation, level, twoDigits);
+  const range = getMagnitudeRange(operation, level, questionIndex);
   let a, b, answer;
 
   if (operation === "suma") {
     a = applySign(rand(range.min, range.max), level);
     b = applySign(rand(range.min, range.max), level);
     answer = a + b;
-    return { question: formatSignedOperation(a, b, "+", level), answer: answer };
+    return { question: formatSignedOperation(a, b, "+", level), answer: answer, a: a, b: b };
   }
   if (operation === "resta") {
     const first = rand(range.min, range.max);
@@ -641,24 +687,44 @@ function generateQuestion(operation, level, questionIndex) {
     a = applySign(first, level);
     b = applySign(second, level);
     answer = a - b;
-    return { question: formatSignedOperation(a, b, "-", level), answer: answer };
+    return { question: formatSignedOperation(a, b, "-", level), answer: answer, a: a, b: b };
   }
   if (operation === "multiplicacion") {
     a = applySign(rand(range.min, range.max), level);
-    b = applySign(rand(2, Math.min(9, 5 + level)), level);
+    b = applySign(rand(range.min, range.max), level);
     answer = a * b;
-    return { question: formatNumber(a, level) + " × " + formatNumber(b, level), answer: answer };
+    const second = level === 1 ? formatNumber(b, level) : (b < 0 ? "(" + formatNumber(b, level) + ")" : formatNumber(b, level));
+    return { question: formatNumber(a, level) + " × " + second, answer: answer, a: a, b: b };
   }
 
-  // División exacta, con dividendo de una o dos cifras según la posición.
-  const divisorMagnitude = rand(2, Math.min(9, 3 + level, range.max));
-  const quotientMin = twoDigits ? Math.max(1, Math.ceil(range.min / divisorMagnitude)) : 1;
-  const quotientMax = Math.max(quotientMin, Math.floor(range.max / divisorMagnitude));
+  const divisorMagnitude = rand(range.min, range.max);
+  const quotientMin = range.min;
+  const quotientMax = Math.max(quotientMin, range.max);
   const quotient = rand(quotientMin, quotientMax);
   a = applySign(divisorMagnitude * quotient, level);
   b = applySign(divisorMagnitude, level);
   answer = a / b;
-  return { question: formatNumber(a, level) + " ÷ " + formatNumber(b, level), answer: answer };
+  const divisorText = level === 1 ? formatNumber(b, level) : (b < 0 ? "(" + formatNumber(b, level) + ")" : formatNumber(b, level));
+  return { question: formatNumber(a, level) + " ÷ " + divisorText, answer: answer, a: a, b: b };
+}
+
+function getDistractors(q, operation) {
+  const values = operation === "suma"
+    ? [q.a - q.b, -q.a + q.b, -q.answer]
+    : operation === "resta"
+      ? [q.a + q.b, q.b - q.a, -q.answer]
+      : [-q.answer, Math.abs(q.answer), q.answer + 1];
+  return values;
+}
+
+function getSignHint(operation) {
+  const hints = {
+    suma: "Con signos iguales, suma los valores y conserva el signo. Con signos diferentes, resta los valores y conserva el signo del número con mayor valor absoluto.",
+    resta: "Convierte la resta en suma del opuesto: a - b = a + (-b). Después aplica la regla de la suma.",
+    multiplicacion: "En la multiplicación: signos iguales dan positivo y signos diferentes dan negativo.",
+    division: "En la división se aplica la misma regla: signos iguales dan cociente positivo y signos diferentes dan cociente negativo."
+  };
+  return hints[operation] || "Observa los signos y aplica la regla correspondiente.";
 }
 
 function showQuestion() {
@@ -667,13 +733,17 @@ function showQuestion() {
     endGame(true);
     return;
   }
-  const q = generateQuestion(state.currentOperation, state.currentLevel, state.questionsAnswered);
+  const q = state.currentQuestion || generateQuestion(state.currentOperation, state.currentLevel, state.questionsAnswered);
+  state.currentQuestion = q;
   if (questionText) questionText.innerHTML = "<span>" + q.question + " = ?</span>";
+  if (signHint) signHint.style.display = state.questionsAnswered === 0 ? "block" : "none";
+  if (signHintText && state.questionsAnswered === 0) signHintText.textContent = getSignHint(state.currentOperation);
   if (!answerButtons) return;
 
   answerButtons.innerHTML = "";
   const correctAnswer = q.answer;
-  const wrongs = new Set();
+  const wrongs = new Set(getDistractors(q, state.currentOperation));
+  wrongs.delete(correctAnswer);
   let guard = 0;
   while (wrongs.size < 3 && guard < 100) {
     guard++;
@@ -686,7 +756,9 @@ function showQuestion() {
     if (fallback === correctAnswer) fallback++;
     wrongs.add(fallback++);
   }
-  const all = Array.from(wrongs).concat([correctAnswer]).sort(function () { return Math.random() - 0.5; });
+  const generatedOptions = Array.from(wrongs).concat([correctAnswer]).sort(function () { return Math.random() - 0.5; });
+  const all = state.answerOptions.length === 4 ? state.answerOptions : generatedOptions;
+  state.answerOptions = all;
   all.forEach(function (ans) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -698,6 +770,7 @@ function showQuestion() {
 
   state.questionsInCurrentLevel = state.questionsAnswered + 1;
   state.totalQuestions = state.questionsAnswered + 1;
+  saveActiveSession();
 }
 
 function showFeedback(ok) {
@@ -719,6 +792,7 @@ function showFeedback(ok) {
 function checkAnswer(selected, correct, btn) {
   unlockAudio();
   if (state.challengeEnded) return;
+  if (signHint) signHint.style.display = "none";
   const buttons = answerButtons ? answerButtons.querySelectorAll(".answer-btn") : [];
   buttons.forEach(function (b) {
     const v = Number(b.textContent);
@@ -736,6 +810,9 @@ function checkAnswer(selected, correct, btn) {
     state.aciertos++;
     document.getElementById("score").textContent = state.score;
     updateCounters();
+    state.currentQuestion = null;
+    state.answerOptions = [];
+    saveActiveSession();
     showFeedback(true);
     celebrate(btn);
     setTimeout(function () {
@@ -746,6 +823,9 @@ function checkAnswer(selected, correct, btn) {
   } else {
     state.errores++;
     updateCounters();
+    state.currentQuestion = null;
+    state.answerOptions = [];
+    saveActiveSession();
     showFeedback(false);
     errorShake(btn);
     setTimeout(function () {
@@ -808,10 +888,10 @@ function playTick(urgent) {
   } catch (e) {}
 }
 
-function startTimer() {
+function startTimer(preserveElapsed) {
   clearTimer();
   if (!state.challengeStartedAt) state.challengeStartedAt = Date.now();
-  state.elapsedSeconds = 0;
+  if (!preserveElapsed) state.elapsedSeconds = 0;
   if (timerEl) {
     timerEl.textContent = formatElapsedTime(state.elapsedSeconds);
     timerEl.classList.remove("pulse-warn", "pulse-critical");
@@ -830,6 +910,7 @@ function endGame() {
   state.challengeEnded = true;
   clearTimer();
   state.elapsedSeconds = Math.floor((Date.now() - state.challengeStartedAt) / 1000);
+  clearActiveSession();
   const retoSuperado = state.aciertos >= QUESTIONS_PER_CHALLENGE;
   const nextLevel = saveChallengeResult();
   const prevMax = obtenerMaximoAciertos();
@@ -894,6 +975,8 @@ function goToMain() {
   state.challengeEnded = false;
   state.challengeStartedAt = null;
   state.elapsedSeconds = 0;
+  state.currentQuestion = null;
+  state.answerOptions = [];
   const sc = document.getElementById("score");
   if (sc) sc.textContent = "0";
   const lv = document.getElementById("levelDisplay");
@@ -920,6 +1003,8 @@ document.addEventListener("DOMContentLoaded", function () {
   answerButtons = document.getElementById("answerButtons");
   timerEl = document.getElementById("timer");
   levelDisplay = document.getElementById("levelDisplay");
+  signHint = document.getElementById("signHint");
+  signHintText = document.getElementById("signHintText");
   controlsOverlay = document.getElementById("controlsOverlay");
   finalScoreEl = document.getElementById("finalScore");
   restartBtn = document.getElementById("restartBtn");
@@ -986,4 +1071,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") saveActiveSession();
+  });
+  window.addEventListener("pagehide", saveActiveSession);
 });

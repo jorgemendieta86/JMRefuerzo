@@ -25,6 +25,8 @@ El proyecto busca convertirse en una herramienta de apoyo didáctico que complem
 - 📊 **Sistema de puntuación**: Lleva un registro detallado de aciertos y errores en tiempo real.
 - 📈 **Estadísticas finales**: Al finalizar cada sesión, se muestran los resultados completos incluyendo máximo de aciertos alcanzado.
 - 🏅 **Niveles progresivos**: La dificultad aumenta conforme el estudiante avanza y acierta correctamente.
+- ➕ **Ley de signos**: Desde el primer nivel se practican signos en las cuatro operaciones, con pistas específicas para cada operación.
+- 💾 **Guardado automático**: El reto en curso se guarda después de cada respuesta y puede recuperarse si se cierra la web o se apaga el equipo.
 - ✍️ **Identificación de estudiante**: Antes de comenzar, cada alumno ingresa su nombre para personalizar sus resultados.
 - 🎨 **Interfaz moderna y atractiva**: Diseño visual con animaciones, partículas y efectos geométricos que hacen del aprendizaje una experiencia engaging.
 - 📱 **Diseño responsivo**: Adaptable a diferentes tamaños de pantalla.
