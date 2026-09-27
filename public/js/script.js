@@ -229,6 +229,132 @@ function formatStoredElapsedTime(seconds) {
   return seconds === undefined || seconds === null ? "-" : formatElapsedTime(seconds);
 }
 
+function exportResultsToPdf() {
+  const pdfApi = window.jspdf;
+  if (!pdfApi || !pdfApi.jsPDF) {
+    window.alert("No se pudo cargar el generador de PDF. Comprueba tu conexión e inténtalo nuevamente.");
+    return;
+  }
+
+  const filterEl = document.getElementById("historyStudentFilter");
+  const activeFilter = filterEl ? filterEl.value : "all";
+  if (activeFilter === "all") {
+    window.alert("Selecciona un estudiante para guardar sus resultados.");
+    return;
+  }
+  const history = getChallengeHistory().slice().reverse().filter(function (record) {
+    return normalizeStudentName(record.studentName || "Estudiante") === activeFilter;
+  });
+  const selectedName = filterEl && filterEl.options[filterEl.selectedIndex]
+    ? filterEl.options[filterEl.selectedIndex].text
+    : "Estudiante";
+  const doc = new pdfApi.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const columns = [
+    { label: "Estudiante", width: 44 },
+    { label: "Operacion", width: 34 },
+    { label: "Nivel", width: 31 },
+    { label: "Aciertos", width: 25 },
+    { label: "Errores", width: 22 },
+    { label: "Tiempo", width: 25 },
+    { label: "Fecha", width: pageWidth - margin * 2 - 181 }
+  ];
+
+  function drawHeader() {
+    doc.setTextColor(37, 99, 235);
+    doc.setFontSize(17);
+    doc.setFont(undefined, "bold");
+    doc.text("Reforzando Operaciones Basicas", margin, 17);
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
+    doc.text("Institucion Educativa Jose Carlos Mariategui - Socchabamba, Ayabaca", margin, 23);
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(11);
+    doc.setFont(undefined, "bold");
+    doc.text("Resultados: " + selectedName, margin, 33);
+    doc.setFontSize(8);
+    doc.setFont(undefined, "normal");
+    doc.text("Generado el " + formatHistoryDate(new Date().toISOString()), pageWidth - margin, 33, { align: "right" });
+  }
+
+  function drawTableHeader(y) {
+    doc.setFillColor(239, 246, 255);
+    doc.setDrawColor(191, 219, 254);
+    doc.rect(margin, y - 5, pageWidth - margin * 2, 9, "FD");
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(8);
+    doc.setFont(undefined, "bold");
+    let x = margin + 2;
+    columns.forEach(function (column) {
+      doc.text(column.label, x, y);
+      x += column.width;
+    });
+  }
+
+  drawHeader();
+  let y = 45;
+  drawTableHeader(y);
+  y += 10;
+
+  if (history.length === 0) {
+    doc.setTextColor(71, 85, 105);
+    doc.setFont(undefined, "normal");
+    doc.setFontSize(10);
+    doc.text("No hay resultados registrados para este filtro.", margin, y + 5);
+  } else {
+    history.forEach(function (record, index) {
+      if (y > pageHeight - 15) {
+        doc.addPage();
+        drawHeader();
+        y = 45;
+        drawTableHeader(y);
+        y += 10;
+      }
+
+      if (index % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, y - 5, pageWidth - margin * 2, 8, "F");
+      }
+      const values = [
+        record.studentName || "Estudiante",
+        record.operationName || (operationsConfig[record.operation] || {}).name || record.operation || "-",
+        "Nivel " + (record.level || "-") + " > " + (record.nextLevel || "-"),
+        String(record.aciertos || 0) + "/" + (record.totalQuestions || QUESTIONS_PER_CHALLENGE),
+        String(record.errores || 0),
+        formatStoredElapsedTime(record.elapsedSeconds),
+        formatHistoryDate(record.completedAt)
+      ];
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(7.5);
+      doc.setFont(undefined, "normal");
+      let x = margin + 2;
+      values.forEach(function (value, valueIndex) {
+        doc.text(doc.splitTextToSize(String(value), columns[valueIndex].width - 4)[0], x, y);
+        x += columns[valueIndex].width;
+      });
+      y += 8;
+    });
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  const studentFileName = selectedName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "estudiante";
+  doc.save("resultados-" + studentFileName + "-" + date + ".pdf");
+}
+
+function updateExportButtonState() {
+  const exportPdfBtn = document.getElementById("exportPdfBtn");
+  const filterEl = document.getElementById("historyStudentFilter");
+  if (exportPdfBtn) exportPdfBtn.disabled = !filterEl || filterEl.value === "all";
+}
+
 function renderHistory(selectedStudent) {
   const body = document.getElementById("historyTableBody");
   const countEl = document.getElementById("historyCount");
@@ -272,6 +398,7 @@ function renderHistory(selectedStudent) {
     const hasRequestedStudent = requestedFilter === "all" || studentKeys.has(requestedFilter);
     filterEl.value = hasRequestedStudent ? requestedFilter : "all";
   }
+  updateExportButtonState();
 
   const activeFilter = filterEl ? filterEl.value : "all";
   const visibleHistory = activeFilter === "all"
@@ -783,25 +910,9 @@ function goToMain() {
 document.addEventListener("DOMContentLoaded", function () {
   createParticles();
 
-  const welcomeOverlay = document.getElementById("welcomeOverlay");
-  const closeWelcomeBtn = document.getElementById("closeWelcomeBtn");
   const mainHeader = document.getElementById("mainHeader");
   const controlsEl = document.getElementById("controls");
   const siteFooter = document.getElementById("siteFooter");
-
-  if (mainHeader) mainHeader.style.display = "none";
-  if (controlsEl) controlsEl.style.display = "none";
-  if (siteFooter) siteFooter.style.display = "none";
-
-  if (welcomeOverlay && closeWelcomeBtn) {
-    closeWelcomeBtn.addEventListener("click", function () {
-      unlockAudio();
-      welcomeOverlay.classList.remove("active");
-      if (mainHeader) mainHeader.style.display = "";
-      if (controlsEl) controlsEl.style.display = "block";
-      if (siteFooter) siteFooter.style.display = "";
-    });
-  }
 
   operationGrid = document.getElementById("operationGrid");
   gameArea = document.getElementById("gameArea");
@@ -827,6 +938,10 @@ document.addEventListener("DOMContentLoaded", function () {
       renderHistory();
     });
   }
+
+  const exportPdfBtn = document.getElementById("exportPdfBtn");
+  if (exportPdfBtn) exportPdfBtn.addEventListener("click", exportResultsToPdf);
+  updateExportButtonState();
 
   if (nameInput && startChallengeBtn) {
     nameInput.addEventListener("input", function () {
